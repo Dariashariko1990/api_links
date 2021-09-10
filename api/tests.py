@@ -1,12 +1,13 @@
 import datetime
+from unittest.mock import patch
 
+import fakeredis
 from django.test import TestCase
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
 import api.views
 
-from django_fakeredis import FakeRedis
 
 LINKS_URL = reverse('links')
 DOMAINS_URL = reverse('domain_stat')
@@ -16,8 +17,9 @@ class PublicLinksApiTest(TestCase):
 
     def setUp(self):
         self.client = APIClient()
+        redis_patcher = patch('api.views.redis_instance', fakeredis.FakeStrictRedis())
+        self.redis = redis_patcher.start()
 
-    @FakeRedis('api.views.redis_instance')
     def test_post_valid_links(self):
         """ Test that valid post request will return HTTP_201_CREATED. """
         payload = {
@@ -32,7 +34,6 @@ class PublicLinksApiTest(TestCase):
         res = self.client.post(LINKS_URL, payload, format='json')
         self.assertEqual(res.status_code, status.HTTP_201_CREATED)
 
-    @FakeRedis('api.views.redis_instance')
     def test_links_saved(self):
         """ Test that post request results in links saved to our redis instance. """
         payload = {
